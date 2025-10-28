@@ -2,6 +2,10 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 
 class Settings(BaseSettings):
+    # --- preferimos DATABASE_URL en producción (Neon/Render)
+    database_url: str | None = Field(default=None, alias="DATABASE_URL")
+
+    # --- fallback por partes (para desarrollo/local con docker)
     postgres_host: str = Field(default="localhost", alias="POSTGRES_HOST")
     postgres_port: int = Field(default=5432, alias="POSTGRES_PORT")
     postgres_db: str = Field(default="candy_db", alias="POSTGRES_DB")
@@ -9,8 +13,8 @@ class Settings(BaseSettings):
     postgres_password: str = Field(default="candy_pass", alias="POSTGRES_PASSWORD")
 
     jwt_secret: str = Field(default="change_me", alias="JWT_SECRET")
-    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
-    jwt_expire_min: int = Field(default=120, alias="JWT_EXPIRE_MIN")
+    # tu auth.py usa JWT_ALG, déjalo así:
+    # jwt_algorithm: str = Field(default="HS256", alias="JWT_ALGORITHM")
 
     admin_email: str | None = Field(default=None, alias="ADMIN_EMAIL")
     admin_password: str | None = Field(default=None, alias="ADMIN_PASSWORD")
