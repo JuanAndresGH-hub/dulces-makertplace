@@ -1,0 +1,17 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.9
+
+python-dotenv==1.0.1
+pydantic[email]==2.9.2
+pydantic-settings==2.6.1
+
+# 🔐 Auth
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+bcrypt==3.2.2          # ← PIN: evita el choque con passlib 1.7.4
+
+# (formularios / uploads si los usas)
+python-multipart==0.0.9

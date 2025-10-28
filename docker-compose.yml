@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: candy_db
+      POSTGRES_USER: candy_user
+      POSTGRES_PASSWORD: candy_pass
+      TZ: America/Bogota
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      TZ: America/Bogota
+
+      # === JWT estable (clave fija) ===
+      SECRET_KEY: "change-this-to-a-long-strong-secret-64+-chars-2025-10-27"
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: "43200"   # 30 días
+
+      # === Invites para crear administradores ===
+      ADMIN_INVITE_CODE: "LETMEIN-2025"
+
+      # (Opcional) Semilla de admin si tu app lo soporta
+      ADMIN_EMAIL: "admin@candymarket.co"
+      ADMIN_PASSWORD: "Admin123!"
+      ADMIN_NAME: "Admin"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    environment:
+      TZ: America/Bogota
+
+volumes:
+  db_data:
