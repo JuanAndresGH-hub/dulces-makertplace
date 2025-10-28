@@ -1,5 +1,7 @@
 # backend/app/main.py
+import os
 from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -13,35 +15,50 @@ from .routers import auth_router, products_router, orders_router, admin_router
 # Usa un nombre distinto para evitar sombra con el paquete "app"
 api = FastAPI(title="Candy Marketplace API", version="1.0.0")
 
-# Servir estáticos (imágenes)
+# ---- Static files (imágenes) ----
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 api.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# CORS (ajusta dominios si quieres)
+# ---- CORS ----
+# Lee dominios permitidos desde la variable de entorno ALLOWED_ORIGINS
+#   Ej: ALLOWED_ORIGINS="https://tu-sitio.netlify.app,http://localhost:5173"
+allowed_env = os.getenv("ALLOWED_ORIGINS", "").strip()
+
+if not allowed_env:
+    # Defaults de desarrollo (no uses '*' con allow_credentials=True)
+    origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    allow_origin_regex = None
+else:
+    if allowed_env == "*" or allowed_env.lower() == "*":
+        # Cuando quieras abrir a todos y usas credenciales, usa regex en lugar de '*'
+        origins = []
+        allow_origin_regex = ".*"
+    else:
+        origins = [o.strip() for o in allowed_env.split(",") if o.strip()]
+        allow_origin_regex = None
+
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "*",  # si quieres abrir a todos durante dev
-    ],
+    allow_origins=origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Routers
+# ---- Routers ----
 api.include_router(auth_router.router, tags=["auth"])
 api.include_router(products_router.router, tags=["products"])
 api.include_router(orders_router.router, tags=["orders"])
 api.include_router(admin_router.router, prefix="/admin", tags=["admin"])  # ✅ prefijo /admin
 
-# Healthcheck rápido
+# ---- Healthcheck ----
 @api.get("/__health")
 def __health():
     return {"status": "ok", "version": "1.0.0"}
 
+# ---- Startup: crear tablas y sembrar datos ----
 @api.on_event("startup")
 def on_startup():
     # Crear tablas
@@ -50,6 +67,7 @@ def on_startup():
     # Semillas
     with Session(bind=engine) as db:
         seed_admin(db)
+
         # Productos de ejemplo (solo si no hay)
         if db.query(Product).count() == 0:
             samples = [
@@ -87,5 +105,5 @@ def on_startup():
             db.add_all(samples)
             db.commit()
 
-# Exporta con el nombre que uvicorn espera: "app"
+# Exporta con el nombre que uvicorn/gunicorn espera
 app = api
