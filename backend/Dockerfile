@@ -10,5 +10,5 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY app /app/app
 
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# No fijes 8000; Render pone $PORT
+CMD ["bash", "-lc", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
